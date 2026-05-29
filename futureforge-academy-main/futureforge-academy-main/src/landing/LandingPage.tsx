@@ -312,6 +312,7 @@ export function LandingPage() {
                   alt="Students building their future with GENIUS GROUPS"
                   className="h-[112%] w-full object-cover"
                   data-parallax="-7"
+                  decoding="async"
                   loading="lazy"
                   width={1200}
                   height={700}

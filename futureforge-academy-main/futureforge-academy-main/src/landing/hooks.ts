@@ -94,6 +94,7 @@ export function useActiveSection() {
 export function useLenisScroll(pageRef: RefObject<HTMLElement | null>, reducedMotion: boolean) {
   useEffect(() => {
     if (reducedMotion) return;
+    if (window.matchMedia("(max-width: 1023px), (pointer: coarse)").matches) return;
 
     let disposed = false;
     let destroyLenis: (() => void) | undefined;
@@ -204,8 +205,6 @@ function createHeroFrameRenderer(
   let velocityIntensity = 0;
   let animationFrame = 0;
   let hasPreloaded = false;
-  let orderedPreloadActive = false;
-  let orderedPreloadFrame = 1;
   let activeFrameLoads = 0;
   let disposed = false;
 
@@ -324,19 +323,9 @@ function createHeroFrameRenderer(
     }
   };
 
-  const preloadAllFramesInOrder = () => {
-    if (orderedPreloadActive) return;
-
-    orderedPreloadActive = true;
-    for (; orderedPreloadFrame <= HERO_FRAME_COUNT; orderedPreloadFrame += 1) {
-      loadFrame(orderedPreloadFrame, "low");
-    }
-    orderedPreloadActive = false;
-  };
-
   const scheduleBackgroundPreload = () => {
     const preload = () => {
-      if (!disposed) preloadAllFramesInOrder();
+      if (!disposed) preloadAround(HERO_STORY_START_FRAME, isCompactViewport ? 5 : 14, "low");
     };
 
     if ("requestIdleCallback" in window) {
@@ -437,15 +426,14 @@ function createHeroFrameRenderer(
       const velocityDirection = velocity >= 0 ? 1 : -1;
       const velocityBoost = clamp(Math.abs(velocity) / 3600, 0, 1);
       const nextFrame = Math.round(1 + sequenceProgress * (HERO_FRAME_COUNT - 1));
-      const preloadRadius = (isCompactViewport ? 10 : 18) + Math.round(velocityBoost * 24);
+      const preloadRadius = (isCompactViewport ? 6 : 12) + Math.round(velocityBoost * 12);
 
       targetFrame = nextFrame;
       velocityIntensity = Math.max(velocityIntensity, velocityBoost);
 
       if (!hasPreloaded) {
         hasPreloaded = true;
-        preloadAllFramesInOrder();
-        preloadAround(HERO_STORY_START_FRAME, isCompactViewport ? 6 : 10, "high");
+        preloadAround(HERO_STORY_START_FRAME, isCompactViewport ? 5 : 10, "high");
       }
 
       preloadAround(nextFrame, preloadRadius, "high");
@@ -465,6 +453,7 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
   useEffect(() => {
     const page = pageRef.current;
     if (!page || reducedMotion) return;
+    if (window.matchMedia("(max-width: 1023px), (pointer: coarse)").matches) return;
 
     let animationContext: Context | undefined;
     let disposed = false;

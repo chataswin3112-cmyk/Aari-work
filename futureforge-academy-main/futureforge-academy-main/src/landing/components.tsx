@@ -228,6 +228,7 @@ export function AcademyBand({ academy, index }: { academy: AcademyStory; index: 
             alt={`${academy.name} learning program`}
             className="absolute inset-0 h-[116%] w-full object-cover"
             data-parallax="-10"
+            decoding="async"
             loading="lazy"
             width={800}
             height={700}
@@ -316,7 +317,8 @@ export function CourseCard({ course, index }: { course: Course; index: number })
           alt={`${course.name} course`}
           className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]"
           style={{ objectPosition: course.imagePosition }}
-          loading="eager"
+          decoding="async"
+          loading="lazy"
           width={720}
           height={520}
         />
@@ -381,17 +383,20 @@ export function TestimonialCard({
 }
 
 export function GalleryCard({ item }: { item: GalleryItem }) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <motion.article
       className="image-frame gallery-card group relative aspect-[4/3] overflow-hidden rounded-[28px] border border-white/12 sm:aspect-[16/11]"
       data-reveal
       transition={{ damping: 24, stiffness: 260, type: "spring" }}
-      whileHover={{ scale: 1.015, y: -5 }}
+      whileHover={shouldReduceMotion ? undefined : { scale: 1.015, y: -5 }}
     >
       <img
         src={item.image}
         alt={item.title}
         className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.08]"
+        decoding="async"
         loading="lazy"
         width={720}
         height={720}
@@ -800,7 +805,7 @@ export function ParticleField() {
       aria-hidden="true"
     >
       <div className="particles" aria-hidden="true" />
-      {Array.from({ length: 44 }).map((_, index) => (
+      {Array.from({ length: 24 }).map((_, index) => (
         <span
           key={index}
           className="particle-dot absolute rounded-full"
