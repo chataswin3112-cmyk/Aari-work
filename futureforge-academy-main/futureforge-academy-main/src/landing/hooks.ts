@@ -216,7 +216,7 @@ function drawCoverSpriteFrame(
 
 function createHeroMobileSpriteRenderer(
   canvas: HTMLCanvasElement,
-  layer: HTMLElement,
+  _layer: HTMLElement,
 ): HeroFrameRenderer | undefined {
   const context = canvas.getContext("2d", { alpha: true });
 
@@ -283,6 +283,7 @@ function createHeroMobileSpriteRenderer(
   };
 
   const render = () => {
+    animationFrame = 0;
     if (disposed) return;
 
     const distance = targetFrame - visualFrame;
@@ -290,12 +291,17 @@ function createHeroMobileSpriteRenderer(
     if (Math.abs(distance) > 0.03) {
       visualFrame += distance * 0.28;
       drawFrame();
+      animationFrame = window.requestAnimationFrame(render);
     } else if (visualFrame !== targetFrame) {
       visualFrame = targetFrame;
       drawFrame();
     }
+  };
 
-    animationFrame = window.requestAnimationFrame(render);
+  const scheduleRender = () => {
+    if (!animationFrame && !disposed) {
+      animationFrame = window.requestAnimationFrame(render);
+    }
   };
 
   image.onload = () => {
@@ -311,7 +317,6 @@ function createHeroMobileSpriteRenderer(
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(canvas);
   resize();
-  animationFrame = window.requestAnimationFrame(render);
 
   return {
     destroy: () => {
@@ -323,14 +328,10 @@ function createHeroMobileSpriteRenderer(
     resize,
     setProgress: (progress, velocity) => {
       const nextFrame = Math.round(clamp(progress, 0, 1) * (HERO_MOBILE_SPRITE.frameCount - 1));
-      const velocityBoost = clamp(Math.abs(velocity) / 3600, 0, 1);
 
-      layer.style.setProperty(
-        "--velocity-glow",
-        clamp(0.08 + velocityBoost * 0.24, 0.08, 0.32).toFixed(3),
-      );
-      layer.style.setProperty("--chromatic-shift", `${clamp(velocityBoost, 0, 1).toFixed(2)}px`);
+      void velocity;
       targetFrame = nextFrame;
+      scheduleRender();
     },
   };
 }
@@ -710,11 +711,16 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                   const progress = self.progress;
                   const frameProgress = clamp((progress - 0.2) / 0.76, 0, 1);
                   const velocity = self.getVelocity();
-                  const velocityGlow = clamp(Math.abs(velocity) / 4200, 0, 1);
 
-                  hero.style.setProperty("--cinematic-progress", progress.toFixed(4));
-                  cinematicLayer.style.setProperty("--sequence-progress", frameProgress.toFixed(4));
-                  cinematicLayer.style.setProperty("--velocity-glow", velocityGlow.toFixed(3));
+                  if (!isCompactExperience) {
+                    const velocityGlow = clamp(Math.abs(velocity) / 4200, 0, 1);
+                    hero.style.setProperty("--cinematic-progress", progress.toFixed(4));
+                    cinematicLayer.style.setProperty(
+                      "--sequence-progress",
+                      frameProgress.toFixed(4),
+                    );
+                    cinematicLayer.style.setProperty("--velocity-glow", velocityGlow.toFixed(3));
+                  }
                   if (progress > 0.18) {
                     frameRenderer.setProgress(frameProgress, velocity);
                   }
@@ -732,9 +738,13 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                 {
                   duration: 0.24,
                   ease: "power4.out",
-                  filter: "blur(1px) saturate(1.12) brightness(0.96)",
-                  scale: 1.2,
-                  yPercent: -2,
+                  ...(isCompactExperience
+                    ? { scale: 1.08, yPercent: -1 }
+                    : {
+                        filter: "blur(1px) saturate(1.12) brightness(0.96)",
+                        scale: 1.2,
+                        yPercent: -2,
+                      }),
                 },
                 0,
               )
@@ -754,7 +764,7 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                   autoAlpha: 0,
                   duration: 0.26,
                   ease: "power2.inOut",
-                  filter: "blur(18px)",
+                  ...(isCompactExperience ? {} : { filter: "blur(18px)" }),
                 },
                 0.16,
               )
@@ -764,9 +774,9 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                   autoAlpha: 0,
                   duration: 0.34,
                   ease: "power3.inOut",
-                  filter: isCompactExperience ? "blur(12px)" : "blur(26px)",
-                  scale: 0.92,
-                  yPercent: -18,
+                  ...(isCompactExperience
+                    ? { scale: 0.95, yPercent: -14 }
+                    : { filter: "blur(26px)", scale: 0.92, yPercent: -18 }),
                 },
                 0.2,
               )
@@ -775,12 +785,14 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                 {
                   duration: 0.38,
                   ease: "expo.inOut",
-                  filter: isCompactExperience
-                    ? "blur(10px) saturate(1.22) brightness(0.62)"
-                    : "blur(22px) saturate(1.45) brightness(0.52)",
-                  opacity: 0.2,
-                  scale: 1.58,
-                  yPercent: -5,
+                  ...(isCompactExperience
+                    ? { opacity: 0.16, scale: 1.24, yPercent: -3 }
+                    : {
+                        filter: "blur(22px) saturate(1.45) brightness(0.52)",
+                        opacity: 0.2,
+                        scale: 1.58,
+                        yPercent: -5,
+                      }),
                 },
                 0.2,
               )

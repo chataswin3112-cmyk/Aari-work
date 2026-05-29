@@ -57,12 +57,12 @@ export const futureBannerImage = futureBanner;
 
 export const HERO_FRAME_COUNT = 300;
 export const HERO_STORY_START_FRAME = 1;
-export const HERO_MOBILE_SPRITE_VERSION = "20260529-mobile-sprite-v2";
+export const HERO_MOBILE_SPRITE_VERSION = "20260529-mobile-sprite-v3";
 export const HERO_MOBILE_SPRITE = {
   columns: 10,
   frameCount: 80,
-  frameHeight: 568,
-  frameWidth: 320,
+  frameHeight: 512,
+  frameWidth: 288,
   src: `/hero-mobile-sprite.webp?v=${HERO_MOBILE_SPRITE_VERSION}`,
 };
 
