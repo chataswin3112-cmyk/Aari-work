@@ -205,6 +205,7 @@ function createHeroFrameRenderer(
   let velocityIntensity = 0;
   let animationFrame = 0;
   let hasPreloaded = false;
+  let lastPreloadCenter = 0;
   let activeFrameLoads = 0;
   let disposed = false;
 
@@ -426,9 +427,12 @@ function createHeroFrameRenderer(
       const velocityDirection = velocity >= 0 ? 1 : -1;
       const velocityBoost = clamp(Math.abs(velocity) / 3600, 0, 1);
       const nextFrame = Math.round(1 + sequenceProgress * (HERO_FRAME_COUNT - 1));
-      const preloadRadius = (isCompactViewport ? 6 : 12) + Math.round(velocityBoost * 12);
+      const frameStep = isCompactViewport ? 4 : 1;
+      const requestedFrame = Math.round(clamp(nextFrame, 1, HERO_FRAME_COUNT) / frameStep) * frameStep;
+      const preloadRadius = (isCompactViewport ? 3 : 12) + Math.round(velocityBoost * 6);
+      const preloadThreshold = isCompactViewport ? 12 : 4;
 
-      targetFrame = nextFrame;
+      targetFrame = clamp(requestedFrame, 1, HERO_FRAME_COUNT);
       velocityIntensity = Math.max(velocityIntensity, velocityBoost);
 
       if (!hasPreloaded) {
@@ -436,11 +440,16 @@ function createHeroFrameRenderer(
         preloadAround(HERO_STORY_START_FRAME, isCompactViewport ? 5 : 10, "high");
       }
 
-      preloadAround(nextFrame, preloadRadius, "high");
+      if (Math.abs(targetFrame - lastPreloadCenter) >= preloadThreshold) {
+        lastPreloadCenter = targetFrame;
+        preloadAround(targetFrame, preloadRadius, "high");
+      } else {
+        loadFrame(targetFrame, "high");
+      }
 
       if (velocityBoost > 0.42) {
         preloadAround(
-          nextFrame + velocityDirection * preloadRadius,
+          targetFrame + velocityDirection * preloadRadius,
           Math.ceil(preloadRadius * 0.55),
           "high",
         );
@@ -453,7 +462,6 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
   useEffect(() => {
     const page = pageRef.current;
     if (!page || reducedMotion) return;
-    if (window.matchMedia("(max-width: 1023px), (pointer: coarse)").matches) return;
 
     let animationContext: Context | undefined;
     let disposed = false;
@@ -468,6 +476,7 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
         animationContext = gsap.context(() => {
           const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
           const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+          const isCompactExperience = !isDesktop || window.matchMedia("(pointer: coarse)").matches;
           const formatCount = (raw: string, value: number) => {
             const suffix = raw.replace(/[\d.]/g, "");
             const rounded = Math.round(value);
@@ -475,23 +484,25 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
             return `${rounded}${suffix}`;
           };
 
-          gsap.utils.toArray<HTMLElement>("main > section").forEach((section) => {
-            gsap.fromTo(
-              section,
-              { filter: "brightness(0.74) blur(9px)", scale: 0.965 },
-              {
-                ease: "power3.out",
-                filter: "brightness(1) blur(0px)",
-                scale: 1,
-                scrollTrigger: {
-                  end: "top 36%",
-                  scrub: 0.9,
-                  start: "top 92%",
-                  trigger: section,
+          if (!isCompactExperience) {
+            gsap.utils.toArray<HTMLElement>("main > section").forEach((section) => {
+              gsap.fromTo(
+                section,
+                { filter: "brightness(0.74) blur(9px)", scale: 0.965 },
+                {
+                  ease: "power3.out",
+                  filter: "brightness(1) blur(0px)",
+                  scale: 1,
+                  scrollTrigger: {
+                    end: "top 36%",
+                    scrub: 0.9,
+                    start: "top 92%",
+                    trigger: section,
+                  },
                 },
-              },
-            );
-          });
+              );
+            });
+          }
 
           const hero = page.querySelector<HTMLElement>("[data-hero-story]");
           const heroCover = page.querySelector<HTMLElement>("[data-hero-cover]");
@@ -593,7 +604,7 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                   autoAlpha: 0,
                   duration: 0.34,
                   ease: "power3.inOut",
-                  filter: "blur(26px)",
+                  filter: isCompactExperience ? "blur(12px)" : "blur(26px)",
                   scale: 0.92,
                   yPercent: -18,
                 },
@@ -604,7 +615,9 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                 {
                   duration: 0.38,
                   ease: "expo.inOut",
-                  filter: "blur(22px) saturate(1.45) brightness(0.52)",
+                  filter: isCompactExperience
+                    ? "blur(10px) saturate(1.22) brightness(0.62)"
+                    : "blur(22px) saturate(1.45) brightness(0.52)",
                   opacity: 0.2,
                   scale: 1.58,
                   yPercent: -5,
@@ -670,6 +683,14 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                 },
                 0.82,
               );
+          }
+
+          if (isCompactExperience) {
+            gsap.utils.toArray<HTMLElement>("[data-count-value]").forEach((element) => {
+              element.textContent = element.dataset.countValue ?? element.textContent;
+            });
+
+            return;
           }
 
           gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((element) => {

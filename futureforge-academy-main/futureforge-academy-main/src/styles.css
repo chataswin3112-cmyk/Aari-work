@@ -1638,7 +1638,6 @@
   .section-space::before,
   .particle-field,
   .aurora-canvas,
-  .hero-cinematic-sequence,
   .hero-ghost-word,
   .hero-light-streak {
     animation: none;
@@ -1699,12 +1698,48 @@
     will-change: auto;
   }
 
+  .hero-section {
+    min-height: 100svh;
+  }
+
+  .hero-section > .mx-auto {
+    align-items: center;
+    min-height: 100svh;
+  }
+
+  .hero-cinematic-sequence {
+    display: block;
+    transform-style: flat;
+  }
+
+  .hero-copy-highlight {
+    margin-inline: auto;
+    max-width: min(100%, 34rem);
+    overflow: hidden;
+    padding: 1.15rem;
+    width: 100%;
+  }
+
   .hero-copy-highlight::before {
-    inset: 3.25rem -0.75rem -0.75rem -0.75rem;
+    background:
+      radial-gradient(circle at 8% 12%, rgba(0, 229, 255, 0.19), transparent 13rem),
+      radial-gradient(circle at 70% 20%, rgba(255, 79, 216, 0.15), transparent 14rem),
+      linear-gradient(180deg, rgba(3, 8, 28, 0.86), rgba(3, 7, 22, 0.62));
+    border: 1px solid rgba(0, 229, 255, 0.16);
+    border-radius: 1.5rem;
+    inset: 0;
   }
 
   .hero-title {
+    max-width: 100%;
     text-wrap: balance;
+  }
+
+  .hero-eyebrow {
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    width: 100%;
   }
 
   .course-card,
@@ -1778,17 +1813,28 @@
   .site-navbar .neon-button.hidden {
     display: none;
   }
+
+  .hero-copy-highlight {
+    padding: 1rem;
+    padding-top: 1.08rem;
+  }
+
+  .hero-copy-highlight .neon-button,
+  .hero-copy-highlight .neon-outline {
+    min-height: 3.4rem;
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
   .hero-title {
-    font-size: clamp(2.35rem, 11.6vw, 3.15rem);
-    line-height: 1.04;
+    font-size: clamp(2.08rem, 10.2vw, 2.72rem);
+    line-height: 1.06;
   }
 
   .hero-lead {
-    font-size: 0.98rem;
-    line-height: 1.75;
+    font-size: 0.94rem;
+    line-height: 1.68;
   }
 
   .section-title {
