@@ -225,7 +225,10 @@ function createHeroMobileSpriteRenderer(
   const image = new Image();
   let canvasWidth = 0;
   let canvasHeight = 0;
-  let currentFrame = 0;
+  let renderedFrame = -1;
+  let visualFrame = 0;
+  let targetFrame = 0;
+  let animationFrame = 0;
   let imageReady = false;
   let disposed = false;
 
@@ -237,14 +240,20 @@ function createHeroMobileSpriteRenderer(
   const drawFrame = () => {
     if (!imageReady || !canvasWidth || !canvasHeight) return;
 
-    const column = currentFrame % HERO_MOBILE_SPRITE.columns;
-    const row = Math.floor(currentFrame / HERO_MOBILE_SPRITE.columns);
+    const frameIndex = Math.round(clamp(visualFrame, 0, HERO_MOBILE_SPRITE.frameCount - 1));
+
+    if (frameIndex === renderedFrame) return;
+
+    renderedFrame = frameIndex;
+
+    const column = frameIndex % HERO_MOBILE_SPRITE.columns;
+    const row = Math.floor(frameIndex / HERO_MOBILE_SPRITE.columns);
 
     context.clearRect(0, 0, canvasWidth, canvasHeight);
     context.globalCompositeOperation = "source-over";
     context.globalAlpha = 1;
     context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = "high";
+    context.imageSmoothingQuality = "low";
     drawCoverSpriteFrame(
       context,
       image,
@@ -259,7 +268,7 @@ function createHeroMobileSpriteRenderer(
 
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.25);
+    const pixelRatio = 0.82;
     const nextWidth = Math.max(1, Math.round(rect.width * pixelRatio));
     const nextHeight = Math.max(1, Math.round(rect.height * pixelRatio));
 
@@ -269,7 +278,24 @@ function createHeroMobileSpriteRenderer(
     canvasHeight = nextHeight;
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
+    renderedFrame = -1;
     drawFrame();
+  };
+
+  const render = () => {
+    if (disposed) return;
+
+    const distance = targetFrame - visualFrame;
+
+    if (Math.abs(distance) > 0.03) {
+      visualFrame += distance * 0.28;
+      drawFrame();
+    } else if (visualFrame !== targetFrame) {
+      visualFrame = targetFrame;
+      drawFrame();
+    }
+
+    animationFrame = window.requestAnimationFrame(render);
   };
 
   image.onload = () => {
@@ -285,10 +311,12 @@ function createHeroMobileSpriteRenderer(
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(canvas);
   resize();
+  animationFrame = window.requestAnimationFrame(render);
 
   return {
     destroy: () => {
       disposed = true;
+      window.cancelAnimationFrame(animationFrame);
       resizeObserver.disconnect();
       context.clearRect(0, 0, canvasWidth, canvasHeight);
     },
@@ -302,11 +330,7 @@ function createHeroMobileSpriteRenderer(
         clamp(0.08 + velocityBoost * 0.24, 0.08, 0.32).toFixed(3),
       );
       layer.style.setProperty("--chromatic-shift", `${clamp(velocityBoost, 0, 1).toFixed(2)}px`);
-
-      if (nextFrame === currentFrame) return;
-
-      currentFrame = nextFrame;
-      drawFrame();
+      targetFrame = nextFrame;
     },
   };
 }
@@ -662,9 +686,9 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
           if (hero && heroCover && heroCopy && cinematicLayer && frameRenderer) {
             gsap.set(cinematicLayer, {
               autoAlpha: 0,
-              rotateX: 3,
-              rotateY: -4,
-              scale: 1.16,
+              rotateX: isCompactExperience ? 0 : 3,
+              rotateY: isCompactExperience ? 0 : -4,
+              scale: isCompactExperience ? 1.04 : 1.16,
               transformOrigin: "50% 52%",
             });
             gsap.set(storyProgress, { scaleX: 0, transformOrigin: "left center" });
@@ -676,8 +700,8 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                 end: () =>
                   `+=${Math.round(
                     Math.max(
-                      window.innerHeight * (isDesktop ? 5.6 : 5),
-                      HERO_FRAME_COUNT * (isDesktop ? 16 : 12),
+                      window.innerHeight * (isDesktop ? 5.6 : 4.4),
+                      HERO_FRAME_COUNT * (isDesktop ? 16 : 8),
                     ),
                   )}`,
                 invalidateOnRefresh: true,
@@ -696,7 +720,7 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                   }
                 },
                 pin: true,
-                scrub: 0.52,
+                scrub: isCompactExperience ? 0.22 : 0.52,
                 start: "top top",
                 trigger: hero,
               },
@@ -779,7 +803,7 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                   ease: "expo.inOut",
                   rotateX: 0,
                   rotateY: 0,
-                  scale: 1.02,
+                  scale: isCompactExperience ? 1 : 1.02,
                 },
                 0.24,
               )
@@ -806,7 +830,7 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
                 {
                   duration: 0.34,
                   ease: "sine.inOut",
-                  scale: 1.075,
+                  scale: isCompactExperience ? 1.018 : 1.075,
                 },
                 0.44,
               )
