@@ -1,7 +1,13 @@
 import { useEffect, useState, type RefObject } from "react";
 import type { Context } from "gsap";
 
-import { HERO_FRAME_COUNT, HERO_STORY_START_FRAME, heroFrameSrc, navLinks } from "./data";
+import {
+  HERO_FRAME_COUNT,
+  HERO_MOBILE_SPRITE,
+  HERO_STORY_START_FRAME,
+  heroFrameSrc,
+  navLinks,
+} from "./data";
 
 const NAV_SECTION_IDS = navLinks.map((link) => link.href.replace("#", ""));
 
@@ -175,6 +181,134 @@ function drawCoverFrame(
   const y = (height - drawHeight) / 2;
 
   context.drawImage(image, x, y, drawWidth, drawHeight);
+}
+
+function drawCoverSpriteFrame(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  sourceX: number,
+  sourceY: number,
+  sourceWidth: number,
+  sourceHeight: number,
+  width: number,
+  height: number,
+) {
+  if (!sourceWidth || !sourceHeight || !width || !height) return;
+
+  const scale = Math.max(width / sourceWidth, height / sourceHeight);
+  const drawWidth = sourceWidth * scale;
+  const drawHeight = sourceHeight * scale;
+  const x = (width - drawWidth) / 2;
+  const y = (height - drawHeight) / 2;
+
+  context.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    x,
+    y,
+    drawWidth,
+    drawHeight,
+  );
+}
+
+function createHeroMobileSpriteRenderer(
+  canvas: HTMLCanvasElement,
+  layer: HTMLElement,
+): HeroFrameRenderer | undefined {
+  const context = canvas.getContext("2d", { alpha: true });
+
+  if (!context) return undefined;
+
+  const image = new Image();
+  let canvasWidth = 0;
+  let canvasHeight = 0;
+  let currentFrame = 0;
+  let imageReady = false;
+  let disposed = false;
+
+  image.decoding = "async";
+  if ("fetchPriority" in image) {
+    image.fetchPriority = "high";
+  }
+
+  const drawFrame = () => {
+    if (!imageReady || !canvasWidth || !canvasHeight) return;
+
+    const column = currentFrame % HERO_MOBILE_SPRITE.columns;
+    const row = Math.floor(currentFrame / HERO_MOBILE_SPRITE.columns);
+
+    context.clearRect(0, 0, canvasWidth, canvasHeight);
+    context.globalCompositeOperation = "source-over";
+    context.globalAlpha = 1;
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    drawCoverSpriteFrame(
+      context,
+      image,
+      column * HERO_MOBILE_SPRITE.frameWidth,
+      row * HERO_MOBILE_SPRITE.frameHeight,
+      HERO_MOBILE_SPRITE.frameWidth,
+      HERO_MOBILE_SPRITE.frameHeight,
+      canvasWidth,
+      canvasHeight,
+    );
+  };
+
+  const resize = () => {
+    const rect = canvas.getBoundingClientRect();
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.25);
+    const nextWidth = Math.max(1, Math.round(rect.width * pixelRatio));
+    const nextHeight = Math.max(1, Math.round(rect.height * pixelRatio));
+
+    if (nextWidth === canvasWidth && nextHeight === canvasHeight) return;
+
+    canvasWidth = nextWidth;
+    canvasHeight = nextHeight;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    drawFrame();
+  };
+
+  image.onload = () => {
+    if (disposed) return;
+    imageReady = true;
+    drawFrame();
+  };
+  image.onerror = () => {
+    canvas.style.display = "none";
+  };
+  image.src = HERO_MOBILE_SPRITE.src;
+
+  const resizeObserver = new ResizeObserver(resize);
+  resizeObserver.observe(canvas);
+  resize();
+
+  return {
+    destroy: () => {
+      disposed = true;
+      resizeObserver.disconnect();
+      context.clearRect(0, 0, canvasWidth, canvasHeight);
+    },
+    resize,
+    setProgress: (progress, velocity) => {
+      const nextFrame = Math.round(clamp(progress, 0, 1) * (HERO_MOBILE_SPRITE.frameCount - 1));
+      const velocityBoost = clamp(Math.abs(velocity) / 3600, 0, 1);
+
+      layer.style.setProperty(
+        "--velocity-glow",
+        clamp(0.08 + velocityBoost * 0.24, 0.08, 0.32).toFixed(3),
+      );
+      layer.style.setProperty("--chromatic-shift", `${clamp(velocityBoost, 0, 1).toFixed(2)}px`);
+
+      if (nextFrame === currentFrame) return;
+
+      currentFrame = nextFrame;
+      drawFrame();
+    },
+  };
 }
 
 function createHeroFrameRenderer(
@@ -516,7 +650,9 @@ export function useLandingMotion(pageRef: RefObject<HTMLElement | null>, reduced
             : [];
           const frameRenderer =
             heroCanvas && cinematicLayer
-              ? createHeroFrameRenderer(heroCanvas, cinematicLayer)
+              ? isCompactExperience
+                ? createHeroMobileSpriteRenderer(heroCanvas, cinematicLayer)
+                : createHeroFrameRenderer(heroCanvas, cinematicLayer)
               : undefined;
 
           if (frameRenderer) {

@@ -57,6 +57,14 @@ export const futureBannerImage = futureBanner;
 
 export const HERO_FRAME_COUNT = 300;
 export const HERO_STORY_START_FRAME = 1;
+export const HERO_MOBILE_SPRITE_VERSION = "20260529-mobile-sprite-v1";
+export const HERO_MOBILE_SPRITE = {
+  columns: 10,
+  frameCount: 60,
+  frameHeight: 640,
+  frameWidth: 360,
+  src: `/hero-mobile-sprite.webp?v=${HERO_MOBILE_SPRITE_VERSION}`,
+};
 
 export function heroFrameSrc(index: number) {
   const frame = Math.min(HERO_FRAME_COUNT, Math.max(1, Math.round(index)));

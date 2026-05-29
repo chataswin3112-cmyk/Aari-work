@@ -16,6 +16,9 @@ services:
       - path: /hero-frames/*
         name: Cache-Control
         value: public, max-age=31536000, immutable
+      - path: /hero-mobile-sprite.*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
       - path: /hero-academy-cover.*
         name: Cache-Control
         value: public, max-age=31536000, immutable
